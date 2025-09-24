@@ -1,0 +1,195 @@
+---
+title: "Desafio 02"
+author: "Maria Eduarda Villéla Silva"
+format: 
+  html: 
+    self-contained: true
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE
+)
+#esse chunk tira os warnings do R de forma global
+```
+
+```{r}
+library(reticulate)
+#usar o ambiente virtual com o python
+use_virtualenv("~/.virtualenvs/r-reticulate", required = TRUE)
+py_discover_config()
+
+#instalando matplotlib no python
+reticulate::py_install("matplotlib")
+reticulate::py_install("calmap")
+
+#pegamos o endereço fornecido do python: C:/Program Files/Python312/python.exe
+#use_python("C:\\Program Files\\Python312\\python.exe") (essa linha acabou não sendo utilizada)
+reticulate::py_install("pandas", envname = NULL, python = "C:/Program Files/Python312/python.exe")
+```
+
+```{python}
+#questão 2
+
+import pandas as pd #carregando a biblioteca pandas
+
+def getStats(input_df, pos): #criando a função getStats
+    
+    df_filtered = input_df[
+        (input_df["AIRLINE"].isin(["AA", "DL", "UA", "US"])) & #filtra as companhias aéreas de interesse
+        (input_df["ARRIVAL_DELAY"].notna()) #remove linhas onde ARRIVAL_DELAY é nulo
+    ]
+    grouped = df_filtered.groupby(["AIRLINE", "DAY", "MONTH"]) #agrupa por companhia aérea, dia e mês
+
+    #calculando as estatísticas:
+    result = grouped.agg(
+        n = ("ARRIVAL_DELAY", "size"), #n = número total de voos no grupo
+        atrasos = ("ARRIVAL_DELAY", lambda x: (x > 10).sum()) #atrasos = número de voos com atraso > 10 minutos
+    ).reset_index()
+
+    return result
+
+```
+
+```{python}
+#questão 3
+
+import time #carregando a biblioteca time
+
+#mensagem inicial e início da contagem de tempo
+print("Importando com 100 mil registros por vez...")
+start_time = time.time() #inicio a contagem
+
+#cria lista para armazenar os resultados de cada chunk
+results = []
+
+#leitura do CSV compactado em chunks (100.000 linhas por vez)
+for chunk in pd.read_csv(
+    "../ME315/flights.csv.zip",
+    chunksize = 100_000,                   #lê 100 mil registros por vez
+    usecols = ["AIRLINE", "DAY", "MONTH", "ARRIVAL_DELAY"],  #equivalente ao cols_only
+    dtype = {"AIRLINE": "string", "DAY": "int32", "MONTH": "int32", "ARRIVAL_DELAY": "float32"}  #define tipos
+):
+    #aplica a função getStats em cada pedaço
+    stats = getStats(chunk, pos=None)
+    results.append(stats)
+
+#concatena todos os resultados em um único data frame
+in3 = pd.concat(results, ignore_index=True)
+
+#tempo total
+end_time = time.time() #fim da contagem
+print(f"Tempo total: {end_time - start_time:.2f} segundos") #imprime a frase na tela
+
+```
+
+```{python}
+#questão 4
+
+def computeStats(input_df): #criando a função computeStats
+    #agrupa os dados por AIRLINE, DAY e MONTH
+    grouped = input_df.groupby(['AIRLINE', 'DAY', 'MONTH'], as_index = False).agg(
+        Perc=('atrasos', lambda x: x.sum() / input_df.loc[x.index, 'n'].sum())  #calcula o percentual de atrasos
+    )
+    
+    #cria uma coluna "Data" combinando ano, mês e dia em formato de data
+    grouped['Data'] = pd.to_datetime(dict(year = 2015, month = grouped['MONTH'], day = grouped['DAY']))
+    
+    #seleciona apenas as colunas AIRLINE, Data e Perc
+    result = grouped[['AIRLINE', 'Data', 'Perc']]
+    
+    return result
+
+#aplica a função computeStats sobre o data frame in3
+in5 = computeStats(in3)
+
+```
+
+```{python}
+#carregando as bibliotecas necessárias
+import numpy as np
+import calendar
+import matplotlib
+from matplotlib import gridspec
+matplotlib.use('Agg')  #usa backend sem interface gráfica
+import matplotlib.pyplot as plt
+
+
+def plot_calendar(stats, airline): #criando uma função para plotar o grafico
+    #filtra dados da companhia aérea específica
+    df = stats[stats['AIRLINE'] == airline].copy()
+    
+    #cria colunas separadas de mês e dia para facilitar a manipulação
+    df['Month'] = df['Data'].dt.month
+    df['Day'] = df['Data'].dt.day
+    
+    #define a escala global para colorir o gráfico
+    vmin = df['Perc'].min()
+    vmax = df['Perc'].max()
+    
+    #define número de meses
+    months = range(1, 13)
+    
+    #cria figura com layout mais controlado
+    fig = plt.figure(figsize = (18, 16))
+    
+    #cria grid para organizar os meses
+    gs = gridspec.GridSpec(4, 3, figure = fig, hspace = 1, wspace = 0.3)
+    
+    #ajusta a posição dos calendários para deixar espaço para o título
+    fig.subplots_adjust(top = 0.88, bottom = 0.05)
+    
+    #itera sobre cada mês
+    for i, month in enumerate(months):
+       #cria subplot para esse mês
+        ax = fig.add_subplot(gs[i])
+        #obtém o número de dias no mês e o dia da semana do primeiro dia (0 = segunda, 6 = domingo)
+        month_days = calendar.monthrange(2015, month)[1]  # número de dias do mês
+        first_weekday = pd.Timestamp(2015, month, 1).weekday()
+        
+        #cria matriz 6x7 preenchida com NaN (para dias sem dados)
+        cal_matrix = np.full((6, 7), np.nan)
+        
+        #preenche a matriz com os valores de atraso para cada dia
+        day_count = 0
+        for week in range(6):
+            for weekday in range(7):
+                #verifica se é um dia válido do mês
+                if day_count < month_days and (week > 0 or weekday >= first_weekday):
+                    day_count += 1
+                    #encontra os dados para esse dia específico
+                    day_data = df[(df['Month'] == month) & (df['Day'] == day_count)]
+                    if not day_data.empty:
+                        cal_matrix[week, weekday] = day_data['Perc'].values[0]
+        
+        #configurações do gráfico
+        ax.set_title(calendar.month_name[month], fontweight = "bold", pad = 10) #nome do mês em negrito
+        ax.set_xticks(range(7))
+        #rótulos dos dias da semana
+        ax.set_xticklabels(['D', 'S', 'T', 'Q', 'Q', 'S', 'S'], fontsize = 9)
+        ax.set_yticks([]) #remove os números das semanas
+        
+        #faz os calendários ficarem quadrados
+        ax.set_box_aspect(0.7)
+    
+        #plota a matriz como heatmap
+        im = ax.imshow(cal_matrix, cmap='coolwarm', vmin = vmin, vmax = vmax, aspect = "auto")  #usa escala global
+        
+    #adiciona barra de cores global em uma posição específica
+    cbar_ax = fig.add_axes([0.90, 0.15, 0.02, 0.7])  #[left, bottom, width, height]
+    cbar = fig.colorbar(im, cax = cbar_ax)
+    cbar.set_label('Percentual de Atraso (%)', fontsize = 10)
+    
+    #ajusta o layout sem usar tight_layout, q é uma função q tava dando problema
+    plt.subplots_adjust(left = 0.05, right = 0.9, top = 0.92, bottom = 0.05)
+    plt.show()
+    
+#plotando os gráficos de cada cia aérea DL UA US
+plot_calendar(in5, 'AA')
+plot_calendar(in5, 'DL')
+plot_calendar(in5, 'UA')
+plot_calendar(in5, 'US') #os últimos 6 calendarios ficaram em branco pq não tem dados sobre as datas em questão
+
+```
