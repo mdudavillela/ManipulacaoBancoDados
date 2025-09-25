@@ -1,0 +1,134 @@
+---
+title: "Desafio 05"
+author: "Maria Eduarda Villéla Silva - RA: 212974"
+format:
+  html:
+    self-contained: true
+editor: visual
+---
+
+```{r}
+#tirar o comentário abaixo se for necessário instalar o pacote antes
+#install.packages("RSQLite")
+```
+
+```{r}
+library(RSQLite)
+db = dbConnect(SQLite(),"desafios/disco.db")
+db
+```
+
+```{r}
+#Quais são as tabelas existentes no banco de dados?
+dbListTables(db) #retorna as tabelas presentes no dataset
+```
+
+```{r}
+#Quais são as colunas na tabela albums?
+dbListFields(db, "albums") #retorna o nome das colunas da tabela pedida
+```
+
+```{r}
+#O comando `dbGetQuery` consulta o banco de dados, extrai os resultados solicitado e os retorna ao R;
+#A sintaxe é dbGetQuery(conexao, chamada SQL);
+#Extraia da tabela albums todas as colunas e todas as linhas e armazene-os em um objeto chamado album_db:
+
+#o * serve para selecionar tudo (SELECT tudo FROM tabela desejada)
+album_db = dbGetQuery(db, 'SELECT * FROM albums')
+head(album_db)
+dim(album_db) #vê a dimensão da tabela
+```
+
+# Questão 1 do Desafio
+
+```{r}
+#Selecione as colunas trackid, name, composer e unitprice. Ordene o objeto resultante por unitprice.
+sql = 'SELECT trackid, name, composer, unitprice FROM tracks ORDER BY unitprice'
+res = dbGetQuery(db, sql)
+head(res)
+```
+
+# Questão 2
+
+```{r}
+#Quais são as cidades de todos os clientes, ordenadas por nome de cidade? (selecionando registros diferentes)
+
+#esse chunk aqui retorna os nomes únicos das cidades, então se tem duas pessoas de Berlim, por exemplo, ele mostra Berlim apenas uma vez.
+
+sql = 'SELECT DISTINCT city FROM customers ORDER BY city' #o DISTINCT pesquisa por linhas únicas
+ex3b = dbGetQuery(db, sql)
+head(ex3b)
+dim(ex3b)
+```
+
+# Questão 3
+
+```{r}
+#Quais são todas as músicas do álbum 1?
+dbGetQuery(db, 'SELECT name, albumid FROM tracks WHERE albumid = 1')
+```
+
+# Questão 4
+
+```{r}
+#Limitando-se a 5 registros, após ordenação por nome, quais são os nomes, ID de álbum e ID de mídia de músicas com mídias de tipo 1 ou 2?
+sql = paste('SELECT name, albumid, mediatypeid FROM tracks',
+'WHERE mediatypeid IN (1, 2)',
+'ORDER BY name LIMIT 5')
+dbGetQuery(db, sql)
+```
+
+# Questão 5
+
+```{r}
+#Quais são as músicas e identificadores de faixa e álbum produzidas pelo artista que identificador 12?
+sql = paste('SELECT trackid, name, albumid FROM tracks',
+'WHERE albumid IN',
+'(SELECT albumid FROM albums WHERE artistid == 12)',
+'LIMIT 5')
+dbGetQuery(db, sql)
+```
+
+# Questão 6
+
+```{r}
+#Quais são as faixas cujos nomes começam com qualquer caracter seguido de 'ere' e terminam com qualquer expressão?
+sql = "SELECT trackid, name FROM tracks WHERE name GLOB '?ere*'"
+dbGetQuery(db, sql)
+```
+
+# Questão 7
+
+```{r}
+#Quais são as faixas cujos nomes possuem algum dígito?
+sql = "SELECT trackid, name FROM tracks WHERE name GLOB '*[0-9]*'"
+dbGetQuery(db, sql)
+```
+
+# Questão 8
+
+```{r}
+#Quantas faixas por disco?
+sql = 'SELECT albumid, COUNT(trackid) FROM tracks GROUP BY albumid'
+dbGetQuery(db, sql)
+```
+
+# Questão 9
+
+```{r}
+#Quantas faixas por disco para o album 1?
+sql = paste('SELECT albumid, COUNT(trackid)',
+'FROM tracks GROUP BY albumid',
+'HAVING albumid = 1') #HAVING filtra por grupos
+dbGetQuery(db, sql)
+```
+
+# Questão 10
+
+```{r}
+#Quais são os nomes de cada faixa com os respectivos títulos dos álbums?
+sql = paste('SELECT trackid, name, title FROM tracks',
+'INNER JOIN albums ON albums.albumid=tracks.albumid')
+dbGetQuery(db, sql)
+```
+
