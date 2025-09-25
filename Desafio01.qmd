@@ -1,0 +1,59 @@
+---
+title: "Desafio 01"
+author: "Maria Eduarda Villéla Silva"
+format: 
+  html:
+    self-contained: true
+editor: visual
+---
+
+Utilize o conjunto de dados `flights.csv.zip` disponível em <https://www.kaggle.com/usdot/flight-delays> e carregue os dados utilizando as funções:
+
+-   `read.csv()` do pacote `base` do **R**
+-   `read_csv()` do pacote `readr` do **R**
+-   `read_csv()` do `pandas` no **Python**
+
+Qual dessas três formas de carregar os dados é mais rápida? (calcule o tempo exato que demorou cada método em carregar os dados no seu computador)
+
+```{r}
+library(reticulate) #pacote para poder usar o python no rstudio
+library(readr) #pacote para usar a função read_csv
+```
+
+
+```{r}
+#criando um ambiente virtual para usar python
+virtualenv_create("env_me315", python = "C:/Program Files/Python312/python.exe")
+use_virtualenv("env_me315", required = TRUE) #manda usar o ambiente virtual criado
+reticulate::py_config() #vendo as configurações do python instalado
+
+```
+
+```{r}
+#usando read.csv da base do R
+unzip("flights.csv.zip", exdir = tempdir())   # extrai para pasta temporária
+system.time({flights <- read.csv(file.path(tempdir(), "flights.csv"),
+                                 stringsAsFactors = FALSE)})
+```
+
+```{r}
+#usando read_csv do pacote readr
+system.time({
+  flights_readr <- read_csv("flights.csv.zip")})
+```
+
+```{python}
+import pandas as pd #importa o pacote pandas, usado pra manipulação de dataframes
+import time         #importa o pacote time, usado para medir o tempo de execução 
+
+start = time.time() #marca o tempo inicial antes de ler o arquivo
+#lê o arquivo "flights.csv" e armazena os dados em um DataFrame chamado flights_pd
+flights_pd = pd.read_csv("flights.csv.zip")
+end = time.time() #marca o tempo final após a leitura do arquivo
+#calcula a diferença entre end e start (tempo total de leitura) e imprime na tela
+print("Tempo:", end - start, "segundos")
+```
+
+Observe que o Python (`read_csv` do pandas) lê mais rápido, tendo o menor tempo 
+de execução dentre as três funções utilizadas.
+
