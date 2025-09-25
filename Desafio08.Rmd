@@ -1,0 +1,189 @@
+---
+title: "Desafio 8"
+author: "Maria Eduarda Villéla Silva"
+date: "`r format(Sys.time(), '%d/%m/%Y %H:%M:%S')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(RSQLite)
+```
+
+1. Baixe o arquivo `uwmadison.sqlite3`. Conecte-se a ele usando o pacote 
+`RSQLite`, armazenando a conexão em uma variável `conn`.
+```{r}
+#conectando o R ao SQLite
+conn <- dbConnect(SQLite(), dbname = "uwmadison.sqlite3")
+conn
+
+dbListTables(conn) #vendo quais são as tabelas do dataset
+
+```
+
+2. Quem são e quantos são os professores que lecionaram disciplinas cujo tópico 
+era estatística (`subjects.abbreviation='STAT'`);
+```{r}
+#os comentários em sql são indicados por --
+#os comentários ficam da mesma cor q o código
+
+#consulta SQL que retorna os professores que já lecionaram disciplinas STAT
+professores_STAT <- dbGetQuery(conn, " -- executa a query no banco conectado
+-- seleciona nomes únicos (DISTINCT) dos professores
+SELECT DISTINCT i.name AS professor
+-- tabela com informações de professores (apelidada como i)
+FROM instructors i
+-- liga cada professor à tabela teachings (que indica em qual seção ele lecionou)
+JOIN teachings t            ON i.id = t.instructor_id
+-- liga teachings às sections (cada seção de uma oferta de curso)
+JOIN sections se            ON t.section_uuid = se.uuid
+-- liga cada seção à oferta específica de um curso
+JOIN course_offerings co    ON se.course_offering_uuid = co.uuid
+-- liga a oferta à tabela que mapeia ofertas para assuntos (subjects)
+JOIN subject_memberships sm ON co.uuid = sm.course_offering_uuid
+-- liga o assunto ao seu código para poder filtrar
+JOIN subjects s             ON sm.subject_code = s.code
+-- filtra apenas as ofertas cujo assunto (abbreviation) é STAT
+WHERE s.abbreviation = 'STAT'
+-- ordena a lista final em ordem alfabética pelo nome do professor
+ORDER BY i.name
+")
+
+#quantidade de professores sendo contada por linha
+qtd_professores <- nrow(professores_STAT)
+qtd_professores
+
+#retorna o nome dos professores de estatística
+professores_STAT
+
+```
+
+3. O GPA americano é definido numa escala de 0 a 4, em que A = 4, AB = 3.5, B = 3, BC = 2.5, C = 2, D = 1 e F = 0. Determinando a nota média de cada oferecimento pela ponderação da quantidade de alunos em cada extrato com os valores numéricos de cada conceito, indique (no que se referente a disciplinas no assunto de estatística):
+- Quem é o professor mais difícil?
+- Quem é o professor mais fácil?
+- Qual é a disciplina mais difícil?
+- Qual é a disciplina mais fácil?
+```{r}
+#pacotes necessários
+library(DBI) #fornece funções para conectar e interagir com bancos de dados
+library(dplyr) #pacote para manipulação de dados de forma mais legível, tipo pipe
+
+#abre uma conexão com o dataset
+conn <- dbConnect(SQLite(), "uwmadison.sqlite3")
+
+#seleção de notas em disciplinas de estatística
+#o join está jutando tabelas diferentes
+gpa_stat <- dbGetQuery(conn, "
+  SELECT co.uuid AS course_offering_uuid, -- id único da oferta de curso
+         c.name AS disciplina,            -- nome da disciplina
+         i.name AS professor,             -- nome do professor
+         gd.a_count, gd.ab_count, gd.b_count, gd.bc_count,
+         gd.c_count, gd.d_count, gd.f_count -- quantidades de cada nota atribuída
+  FROM grade_distributions gd
+  JOIN course_offerings co 
+       ON gd.course_offering_uuid = co.uuid
+  JOIN courses c 
+       ON co.course_uuid = c.uuid
+  JOIN subject_memberships sm 
+       ON co.uuid = sm.course_offering_uuid
+  JOIN subjects s 
+       ON sm.subject_code = s.code
+  JOIN sections sec 
+       ON co.uuid = sec.course_offering_uuid
+  JOIN teachings t 
+       ON sec.uuid = t.section_uuid
+  JOIN instructors i 
+       ON t.instructor_id = i.id
+  WHERE s.abbreviation = 'STAT' -- filtra apenas disciplinas de estatística
+") #executa a query SQL e retorna em um dataframe chamado gpa_stat
+
+#conversão das colunas de notas
+num_cols <- c("a_count","ab_count","b_count","bc_count","c_count","d_count","f_count")
+gpa_stat[num_cols] <- lapply(gpa_stat[num_cols], function(x) {
+  x <- as.numeric(x) #garante que cada coluna seja numérica
+  x[is.na(x)] <- 0    #substitui valores ausentes (NA) por zero
+  x
+})
+
+#cálculo do GPA por turma
+gpa_stat <- gpa_stat %>%
+  mutate(
+    #soma total de alunos avaliados em cada turma
+    total = rowSums(select(., all_of(num_cols))),
+    #calcula GPA ponderado (se houver alunos)
+    gpa = ifelse(total > 0, 
+                 (4*a_count + 3.5*ab_count + 3*b_count + 2.5*bc_count +
+                  2*c_count + 1*d_count) / total, #fórmula ponderada de GPA
+                 NA_real_)) #caso não haja alunos, retorna NA
+
+#agrupar por professor e disciplina para calcular o GPA médio
+prof_gpa <- gpa_stat %>%
+  group_by(professor) %>%                  #agrupa todas as turmas pelo mesmo professor
+  summarise(gpa_medio = mean(gpa, na.rm = TRUE)) #calcula a média de GPA ignorando NAs
+
+disc_gpa <- gpa_stat %>%
+  group_by(disciplina) %>%                 #agrupa todas as turmas da mesma disciplina
+  summarise(gpa_medio = mean(gpa, na.rm = TRUE)) #calcula a média de GPA por disciplina
+
+
+#professores mais difíceis/mais fáceis
+gpa_min_prof <- min(prof_gpa$gpa_medio, na.rm = TRUE) #menor GPA médio entre professores
+gpa_max_prof <- max(prof_gpa$gpa_medio, na.rm = TRUE) #maior GPA médio entre professores
+
+#filtra todos os professores com menor média (mais difíceis)
+professores_mais_dificeis <- prof_gpa %>% 
+  filter(gpa_medio == gpa_min_prof)
+
+#filtra todos os professores com maior média (mais fáceis)
+professores_mais_faceis <- prof_gpa %>% 
+  filter(gpa_medio == gpa_max_prof)
+
+#disciplinas mais difíceis/mais fáceis
+gpa_min_disc <- min(disc_gpa$gpa_medio, na.rm = TRUE) #menor GPA médio entre disciplinas
+gpa_max_disc <- max(disc_gpa$gpa_medio, na.rm = TRUE) #maior GPA médio entre disciplinas
+
+#filtra todas as disciplinas mais difíceis
+disciplinas_mais_dificeis <- disc_gpa %>% 
+  filter(gpa_medio == gpa_min_disc)
+
+# filtra todas as disciplinas mais fáceis
+disciplinas_mais_faceis <- disc_gpa %>% 
+  filter(gpa_medio == gpa_max_disc)
+
+#resultados
+resultado <- bind_rows(
+  professores_mais_dificeis %>% 
+    transmute(categoria = "Professor mais difícil", #cria coluna fixa "categoria"
+              nome = professor, #coloca o nome do professor na coluna "nome"
+              gpa_medio),  #mantém a média calculada
+
+#todas as linhas abaixo têm explicação análoga à de cima
+  professores_mais_faceis %>% 
+    transmute(categoria = "Professor mais fácil",
+              nome = professor,
+              gpa_medio),
+  
+  disciplinas_mais_dificeis %>% 
+    transmute(categoria = "Disciplina mais difícil",
+              nome = disciplina,
+              gpa_medio),
+  
+  disciplinas_mais_faceis %>% 
+    transmute(categoria = "Disciplina mais fácil",
+              nome = disciplina,
+              gpa_medio)
+)
+
+print(resultado) #mostra o resultado na tela
+
+
+```
+
+4. Desconecte do banco de dados.
+```{r}
+dbDisconnect(conn)
+```
+
