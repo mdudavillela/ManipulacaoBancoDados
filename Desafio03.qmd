@@ -1,0 +1,49 @@
+---
+title: "Desafio 03 - ME315"
+author: "Maria Eduarda Villéla Silva"
+format:
+  html:
+    self-contained: true
+editor: visual
+---
+
+###Introdução
+
+Arquivo parquet é um formato de arquivo colunar, isto é, armazena dados pora coluna (não por linha). Tal formato foi criado para guardar grandes volumes de dados de forma eficiente, possuindo compressão automática, o que ocupa menos espaço em disco. O parquet é muito usado em big data e ciência de dados para armazenar tabelas grandes.
+O banco de dados parquet usado nesse desafio pode ser econtrado no link: <https://www.kaggle.com/datasets/jakewright/2m-daily-weather-history-uk?resource=download&select=all_weather_data.parquet>
+
+
+Arquivo JSON (JavaScript Object Notation) é um formato de arquivo baseado em texto, usado para representar dados estruturados, isto é, ele usa pares de chave-valor e listas. Esse tipo de arquivo pode armazenar desde objetos simples até estruturas aninhadas (listas dentro de listas). O JSON é muito usado em APIs, troca de dados entre sistemas e armazenamento de configurações.
+O banco de dados JSON usado nesse desafio pode ser encontrado no link:
+<https://www.kaggle.com/datasets/eswarchandt/amazon-music-reviews?select=Musical_Instruments_5.json>
+
+##Códigos a serem executados
+
+Carregamento dos pacotes necessários:
+
+```{r}
+library(arrow) #pacote para ler parquet
+library(jsonlite) #pacote para ler json e trabalhar com aqrquivos json em geral
+```
+
+Leitura do arquivo parquet:
+
+```{r}
+#afunção read_parquet() lê o arquivo e retorna um data frame
+
+arq_parquet <- read_parquet("all_weather_data.parquet")
+class(arq_parquet)
+```
+
+Foi realizado o uso da função `arrow::read_parquet` para ler o arquivo all_weather_data.parquet do diretório atual. Por padrão, o `arrow` converte para data frame. Foi usada a função `r class(arq_parquet)` para mostrar que o banco de dados foi carregado como data frame, já que essa função serve para identificar a classe de um objeto.
+
+Leitura do arquivo JSON:
+
+```{r}
+#a função lê o arquivo JSON linha a linha (JSON lines)
+
+arq_json <- stream_in(file("Musical_Instruments_5.json"))
+class(arq_json)
+```
+
+O arquivo é do tipo JSON Lines (cada linha é um objeto JSON separado). Assim, o R lê cada linha separadamente e depois junta tudo em um data frame. A função `file()` cria uma conexão R para o arquivo, isso permite que ele seja lido linha a linha, sem tentar carregar tudo como um único JSON grande. O `stream_in()` (do pacote `jsonlite`) consome a conexão e decodifica cada linha JSON, empilhando em um data frame, se as chaves forem consistentes. Isso resolve o problema de arquivos de reviews (como Amazon, que é o caso usado aqui) que não estão em um array, e sim como objetos soltos por linha. Aqui também foi utilizada a função `r class(arq_json)` para ver que o carregamento do banco de dados resultou diretamente em um data frame.
