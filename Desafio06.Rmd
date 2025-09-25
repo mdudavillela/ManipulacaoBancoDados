@@ -1,0 +1,172 @@
+---
+title: "Desafio 6"
+author: "Maria Eduarda Villéla Silva"
+date: "16 de setembro de 2025"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#IMPORTANTE:  a última pergunta do lab 6 (questão 11) teve que ficar abaixo das
+#duas perguntas do desafio, que se encontram no final após a questão 10 do lab,
+#pois a pergunta 11 pede para que seja feita a desconexão do R com o SQLite,
+#então não seria possível rodar mais códigos SQL depois da resposta
+
+library(dplyr) #para as manipulações e pq eu uso pipe
+```
+
+1. Baixe o arquivo disco.db e armazene na variável path o caminho completo (pasta) na qual o arquivo foi gravado. Utilize o comando `file.path()` para combinar a variável path com o nome do arquivo (disco.db) e obter o nome do arquivo com seu respectivo caminho. Armazene este resultado na variável fname.
+```{r}
+#respondendo a pergunta com caminho relativo
+path <- "desafios"
+fname <- path %>% file.path("disco.db")
+fname
+```
+
+2. Utilizando o pacote `RSQLite`, conecte-se ao arquivo de banco de dados. Armazene a conexão na variável conn.
+```{r}
+library(RSQLite) #carregando a biblioteca
+
+conn <- dbConnect(SQLite(), dbname = fname) #conectando ao dataset SQLite
+conn
+```
+
+3. Liste as tabelas existentes no banco de dados.
+```{r}
+conn %>% dbListTables() #ver quais tabelas estão dentro do dataset
+```
+4. Identifique os nomes de todas as colunas existentes na tabela `customers`.
+```{r}
+conn %>% dbListFields("customers") #listando os nomes das colunas de customers
+```
+5. Utilizando apenas `SQLite`, com o apoio do comando `dbGetQuery`, identifique quantos clientes estão atualmente cadastrados neste banco de dados.
+```{r}
+conn %>% dbGetQuery("SELECT COUNT(*) AS total_clientes FROM customers") 
+#seleciona e conta todos (*) os clientes da tabela customers, retornando uma
+#coluna com o total
+
+```
+
+6. Utilizando apenas `SQLite`, identifique o número de países diferentes em que moram os clientes encontrados acima.
+```{r}
+conn %>% dbGetQuery("SELECT COUNT (DISTINCT Country) AS total_paises FROM customers")
+#seleciona e conta países distintos para retornar uma coluna com o total de
+#paises diferentes em customers
+```
+
+7. Utilizando apenas `SQLite`, quantos clientes existem por país? A tabela resultante deve conter o nome do país e a respectiva contagem, além de ser ordenada de maneira decrescente pela referida contagem.
+```{r}
+#criando uma tabela chamada clientes_por_pais
+clientes_por_pais <- conn %>%
+  dbGetQuery("SELECT Country, COUNT(*) AS total_clientes
+             FROM customers
+             GROUP BY Country
+             ORDER BY total_clientes DESC")
+clientes_por_pais
+#seleciona o país, conta todos os clientes de customers existem para cada país,
+#agrupa por país e coloca em ordem decrescente o total de clientes
+```
+
+8. Quais são os 5 países com mais clientes registrados? Use apenas `SQLite`.
+```{r}
+top5_paises <- conn %>% 
+dbGetQuery("SELECT Country, COUNT(*) AS total_clientes
+    FROM customers
+    GROUP BY Country
+    ORDER BY total_clientes DESC
+    LIMIT 5")
+top5_paises
+#faz a mesma coisa q o chunk anterior, mas com um comando q limita a saída para
+#5 linhas
+```
+
+9. Quais são os países registrados que possuem apenas 6 letras no nome?
+```{r}
+resposta <- conn %>% 
+  dbGetQuery("SELECT DISTINCT Country
+             FROM customers
+             WHERE LENGTH(Country) = 6")
+resposta
+#seleciona países distintos de customers nos quais o comprimento é igual a 6
+```
+
+10. Quais foram as músicas compradas por clientes brasileiros?
+```{r}
+musicas_brasil <- conn %>% 
+dbGetQuery("SELECT DISTINCT t.Name AS Musica
+    FROM customers c
+    JOIN invoices i ON c.CustomerId = i.CustomerId
+    JOIN invoice_items ii ON i.InvoiceId = ii.InvoiceId
+    JOIN tracks t ON ii.TrackId = t.TrackId
+    WHERE c.Country = 'Brazil'")
+
+musicas_brasil
+#conecta clientes brasileiros às suas faturas, dps aos itens comprados e dps às
+#músicas, retornando os nomes únicos das músicas compradas por esses clientes
+```
+
+# Perguntas do desafio
+
+Qual o álbum mais tocado por pais?
+```{r}
+album_mais_tocado <- conn %>% 
+  dbGetQuery("SELECT Country, Album, MAX(TotalTocados) AS MaisTocado
+    FROM (
+      SELECT c.Country, al.Title AS Album, COUNT(*) AS TotalTocados
+      FROM customers c
+      JOIN invoices i ON c.CustomerId = i.CustomerId
+      JOIN invoice_items ii ON i.InvoiceId = ii.InvoiceId
+      JOIN tracks t ON ii.TrackId = t.TrackId
+      JOIN albums al ON t.AlbumId = al.AlbumId
+      GROUP BY c.Country, al.Title
+    ) sub
+    GROUP BY Country
+    ORDER BY Country")
+album_mais_tocado
+#primeiro criamos uma subconsulta (subquery) que junta as tabelas necessárias:
+#customers (c) - contém os clientes e seus países; invoices (i) - faturas
+#associadas a cada cliente; invoice_items (ii) - itens de cada fatura
+#(cada faixa comprada/tocada); tracks (t) - faixas de músicas; albums (al) -
+#informações sobre os álbuns. a subconsulta conta quantas vezes cada álbum foi
+#tocado por país, agrupando por país (c.Country) e título do álbum (al.Title).
+#depois, na consulta principal, usamos essa subconsulta e aplicamos
+#MAX(TotalTocados) para selecionar apenas o álbum mais tocado de cada país.
+#o resultado final mostra três colunas e por fim, ordenamos o resultado por país
+#para ficar mais organizado.
+
+```
+
+Qual o artista mais tocado por pais?
+```{r}
+artista_mais_tocado <- conn %>% 
+  dbGetQuery("SELECT Country, Artista, MAX(TotalTocados) AS MaisTocado
+    FROM (
+      SELECT c.Country, ar.Name AS Artista, COUNT(*) AS TotalTocados
+      FROM customers c
+      JOIN invoices i ON c.CustomerId = i.CustomerId
+      JOIN invoice_items ii ON i.InvoiceId = ii.InvoiceId
+      JOIN tracks t ON ii.TrackId = t.TrackId
+      JOIN albums al ON t.AlbumId = al.AlbumId
+      JOIN artists ar ON al.ArtistId = ar.ArtistId
+      GROUP BY c.Country, ar.Name
+    ) sub
+    GROUP BY Country
+    ORDER BY Country;")
+artista_mais_tocado
+#o código faz algo análogo ao do chunk anterior, mas foi preciso incluir a
+#tabela artists, q está relacionada a albums pela chave ArtistId
+
+```
+
+
+11. Desconecte do banco de dados.
+```{r}
+#desconectando do banco de dados
+dbDisconnect(conn)
+```
