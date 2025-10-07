@@ -1,0 +1,246 @@
+---
+title: "Desafio 11"
+author: "Maria Eduarda Villéla Silva"
+format:
+  html:
+    self-contained: true
+editor: visual
+---
+
+Este relatório foi compilado em: `r format(Sys.time(), "%d/%m/%Y %H:%M:%S")`.
+
+```{r}
+library(reticulate) #para usar o python no RStudio
+
+#garantir que o reticulate vai usar o Python 3.12 que está presente nos pcs do lab
+use_virtualenv("~/.virtualenvs/r-reticulate", required = TRUE)
+py_run_string("import polars as pl; print(pl.__version__)")
+
+#instalar pacotes dentro desse Python, apenas se o chunk logo abaixo não funcionar
+py_install("pip", pip = TRUE)
+#py_install("numpy", pip = TRUE)
+#py_install("pyarrow", pip = TRUE)
+#py_install("polars[pyarrow]", pip = TRUE)
+```
+
+```{python}
+#importando polars no RStudio
+import polars as pl
+```
+
+1.  Utilizando o arquivo `renda_adulta.csv` e sabendo que ele não possui cabeçalho, faça a importação do banco de dados utilizando os nomes das colunas conforme apresentado acima e na sequência ali indicada. No momento da importação do arquivo, você deve, também, indicar os tipos de cada uma das colunas. Utilize o fato de que o símbolo `?` representa valores faltantes.
+
+```{python}
+#definindo os nomes das colunas
+nomes_colunas = [
+    "idade", "classe_trabalho", "fnlwgt", "educacao", "num_educacao",
+    "estado_civil", "ocupacao", "relacionamento", "raca", "sexo",
+    "ganho_capital", "perda_capital", "horas_semanais", "pais_origem", "renda"]
+
+#definição dos tipos de cada coluna
+tipos_colunas = {
+    "idade": pl.Int64,
+    "classe_trabalho": pl.Utf8,
+    "fnlwgt": pl.Int64,
+    "educacao": pl.Utf8,
+    "num_educacao": pl.Int64,
+    "estado_civil": pl.Utf8,
+    "ocupacao": pl.Utf8,
+    "relacionamento": pl.Utf8,
+    "raca": pl.Utf8,
+    "sexo": pl.Utf8,
+    "ganho_capital": pl.Int64,
+    "perda_capital": pl.Int64,
+    "horas_semanais": pl.Int64,
+    "pais_origem": pl.Utf8,
+    "renda": pl.Utf8}
+
+#leitura do CSV sem cabeçalho, substituindo '?' por nulos
+renda_adulta = pl.read_csv(
+    "renda_adulta.csv",
+    has_header = False,          #arquivo sem cabeçalho
+    new_columns = nomes_colunas, #define os nomes
+    schema_overrides = tipos_colunas,      #define os tipos
+    null_values = "?"            #trata ? como valor faltante
+)
+
+#exibir as 5 primeiras linhas
+print(renda_adulta.head())
+
+#verificar o esquema das colunas
+print(renda_adulta.schema)
+
+```
+
+2. Apresente os tipos de cada uma das coluna.
+```{python}
+#mostrando o tipo de cada coluna
+#o \n no início e no fim adiciona linhas em branco antes e depois da mensagem, para deixar a saída mais organizada
+
+print("\nTipos de cada coluna:\n")
+for coluna, tipo in renda_adulta.schema.items():
+    print(f"{coluna:<15} -> {tipo}")
+    
+#items() permite iterar sobre o dicionário, pegando pares (coluna, tipo)
+#O for percorre todas as colunas do DataFrame
+```
+
+3. Apresente as dimensões da tabela de dados.
+```{python}
+#mostrando as dimensões
+n_linhas, n_colunas = renda_adulta.shape
+print(f"A tabela possui {n_linhas} linhas e {n_colunas} colunas.")
+#note que a saída printa uma frase bonitinha para apresentar o que foi pedido
+```
+
+4. Quantas pessoas recebem acima de $50.000 e quantas pessoas recebem abaixo deste limiar?
+```{python}
+#contando quantas pessoas estão acima e abaixo de 50K
+contagem_renda = renda_adulta.group_by("renda").len()
+print(contagem_renda) #printando na tela
+```
+
+5. Crie um objeto chamado `renda_longo`, no qual você transforma as colunas `capital-gain` e `capital-loss` (formato wide) para formato longo. Os valores destas variáveis devem ser armazenados numa nova coluna chamada `Valor` e os tipos de valores (gain e loss) devem ser armazenados numa coluna chamada `tipo`.
+```{python}
+# remove espaços extras no início ou final dos valores da coluna 'renda'
+# isso evita problemas como comparar '>50K ' com '>50K'
+renda_adulta = renda_adulta.with_columns(
+    pl.col("renda").str.strip_chars().alias("renda")
+)
+
+# transforma as colunas 'ganho_capital' e 'perda_capital' do formato wide → long
+# melt() "empilha" essas duas colunas em uma só chamada 'Valor'
+# e cria outra coluna chamada 'tipo' indicando se o valor vem de ganho ou perda
+renda_longo = renda_adulta.unpivot(
+    index = [
+        "idade", "classe_trabalho", "fnlwgt", "educacao", "num_educacao",
+        "estado_civil", "ocupacao", "relacionamento", "raca", "sexo",
+        "horas_semanais", "pais_origem", "renda"
+    ],                       # colunas que permanecem fixas
+    on = ["ganho_capital", "perda_capital"],  # colunas que serão empilhadas
+    variable_name="tipo",     # nova coluna que indica o tipo (ganho ou perda)
+    value_name="Valor"        # nova coluna que armazena os valores numéricos
+)
+
+# substitui os nomes longos das variáveis por versões curtas
+# "ganho_capital" → "gain"
+# "perda_capital" → "loss"
+renda_longo = renda_longo.with_columns(
+    pl.col("tipo")
+      .str.replace("ganho_capital", "gain")
+      .str.replace("perda_capital", "loss")
+)
+
+#exibe as primeiras linhas do novo DataFrame em formato longo
+print(renda_longo.head())
+
+```
+
+6. Quais são as médias de horas trabalhadas por classe salarial?
+```{python}
+#calcular a média de horas por classe salarial
+media_horas = (
+    renda_adulta
+    .group_by("renda")                  #agrupa pelos níveis de renda
+    .agg(pl.col("horas_semanais").mean().alias("media_horas"))  #calcula média
+)
+
+#ordenar para ficar mais legível (opcional)
+media_horas = media_horas.sort("renda")
+#exibir o resultado
+print(media_horas)
+```
+
+7. Se cada linha representa uma pessoa, quantas pessoas foram amostradas em cada profissão?
+```{python}
+#remover espaços extras na coluna 'ocupacao'
+renda_adulta = renda_adulta.with_columns(
+    pl.col("ocupacao").str.strip_chars().alias("ocupacao")
+)
+
+#contar o número de pessoas por ocupação
+contagem_ocupacao = (
+    renda_adulta
+    .group_by("ocupacao")             #agrupa por profissão
+    .agg(pl.len().alias("num_pessoas"))  #conta quantas linhas/pessoas em cada grupo
+    .sort("num_pessoas", descending = True)     #opcional: ordena do maior para o menor
+)
+
+#exibir resultado
+print(contagem_ocupacao)
+
+```
+
+8. Crie um gráfico de barras que apresente o número médio de horas trabalhadas semanalmente em função do nível salarial.
+```{python}
+#importando uma biblioteca necessária
+import matplotlib
+matplotlib.use("Agg")  #backend que não abre janelas, adequado para renderização em qmd
+import matplotlib.pyplot as plt
+
+#calculando a média de horas por nível salarial
+media_horas = (
+    renda_adulta
+    .group_by("renda")  
+    .agg(pl.col("horas_semanais").mean().alias("media_horas"))
+    .sort("renda")  # opcional: ordena alfabeticamente pelos níveis de renda
+)
+
+#convertendo para listas para o matplotlib
+renda_labels = media_horas["renda"].to_list()
+horas_medias = media_horas["media_horas"].to_list()
+
+#criando o gráfico de barras
+plt.figure(figsize=(8, 5))
+plt.bar(renda_labels, horas_medias, color=["darkred", "darkblue"])
+plt.title("Média de Horas Trabalhadas por Semana por Nível Salarial")
+plt.xlabel("Nível Salarial")
+plt.ylabel("Média de Horas Semanais")
+plt.ylim(0, max(horas_medias) + 5)  # adiciona espaço acima das barras
+plt.show()
+
+```
+
+9. Desafio: existe alguma evidência de discriminação salarial entre gêneros biológicos?
+```{python}
+#limpando espaços nas colunas de interesse
+renda_adulta = renda_adulta.with_columns([
+    pl.col("renda").str.strip_chars().alias("renda"),
+    pl.col("sexo").str.strip_chars().alias("sexo")
+])
+
+#contando pessoas acima e abaixo de 50k por gênero
+contagem_sexo_renda = (
+    renda_adulta
+    .group_by(["sexo", "renda"])
+    .agg(pl.len().alias("quantidade"))
+    .sort(["sexo", "renda"]))
+print("\nTabela 1: Contagem de pessoas por gênero e classe salarial")
+print(contagem_sexo_renda) #isso mostra, para cada gênero, quantas pessoas estão acima ou abaixo de 50K
+
+#calculando proporção de renda por gênero
+#total por gênero
+total_por_genero = (
+    renda_adulta.group_by("sexo")
+    .agg(pl.len().alias("total"))
+)
+
+#pessoas com renda >50K
+acima_50k = (
+    renda_adulta.filter(pl.col("renda") == ">50K")
+    .group_by("sexo")
+    .agg(pl.len().alias("acima_50k"))
+)
+
+#unir e calcular proporção
+proporcao = total_por_genero.join(acima_50k, on="sexo", how="left").with_columns(
+    (pl.col("acima_50k") / pl.col("total") * 100).alias("perc_acima_50k")
+)
+print("\nTabela 2: Proporção de pessoas com renda >50K")
+print(proporcao)
+```
+Segundo a `Tabela 1`, é notável que Uma proporção maior de homens está na classe salarial >50K,
+enquanto mulheres têm menos representantes na faixa salarial alta.
+
+De acordo com a `Tabela 2`, a proporção de pessoas com renda >50K é maior para homens comparado a mulheres.
+Em termos absolutos, mais homens ganham >50K, refletindo desigualdade salarial na amostra.
