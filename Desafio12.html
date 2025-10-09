@@ -3111,7 +3111,7 @@ vertical-align: -.125em;
 </header>
 
 
-<p>Este relatório foi compilado em: 09/10/2025 09:04:54.</p>
+<p>Este relatório foi compilado em: 09/10/2025 10:21:52.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(reticulate) <span class="co">#para usar o python no RStudio</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -3146,7 +3146,7 @@ vertical-align: -.125em;
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="st">)</span></span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;&#39;&#39;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;sqlite3.Cursor object at 0x00000191F4607540&gt;</code></pre>
+<pre><code>&lt;sqlite3.Cursor object at 0x0000013677673540&gt;</code></pre>
 </div>
 </div>
 <p>Inserção de dados em uma tabela</p>
@@ -3162,7 +3162,7 @@ vertical-align: -.125em;
 <span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="st">    (&#39;Carlos&#39;, &#39;Produto C&#39;, 100.0, &#39;2024-10-05&#39;);</span></span>
 <span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;&#39;&#39;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;sqlite3.Cursor object at 0x00000191F4607540&gt;</code></pre>
+<pre><code>&lt;sqlite3.Cursor object at 0x0000013677673540&gt;</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>conn.commit()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
@@ -3171,7 +3171,7 @@ vertical-align: -.125em;
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">#executa um comando SQL diretamente no banco, selecionando todas as colunas e linhas da tabela &#39;vendas&#39;</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>cursor.execute(<span class="st">&quot;SELECT * FROM vendas&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;sqlite3.Cursor object at 0x00000191F4607540&gt;</code></pre>
+<pre><code>&lt;sqlite3.Cursor object at 0x0000013677673540&gt;</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">#busca (lê) todos os resultados retornados pela consulta e armazena numa lista chamada &#39;rows&#39;</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>rows <span class="op">=</span> cursor.fetchall()</span>
@@ -3334,7 +3334,7 @@ vertical-align: -.125em;
 <span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a><span class="st">);</span></span>
 <span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;&#39;&#39;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;sqlite3.Cursor object at 0x00000191F4607540&gt;</code></pre>
+<pre><code>&lt;sqlite3.Cursor object at 0x0000013677673540&gt;</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">#insere registros iniciais na tabela de produtos, com nome, categoria, preço e quantidade em estoque</span></span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>cursor.execute(<span class="st">&#39;&#39;&#39;</span></span>
@@ -3346,7 +3346,7 @@ vertical-align: -.125em;
 <span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a><span class="st">    (&#39;Produto E&#39;, &#39;Categoria 3&#39;, 300.0, 0);</span></span>
 <span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a><span class="st">&#39;&#39;&#39;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>&lt;sqlite3.Cursor object at 0x00000191F4607540&gt;</code></pre>
+<pre><code>&lt;sqlite3.Cursor object at 0x0000013677673540&gt;</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>conn.commit() <span class="co">#salva as alterações (inserções) no banco de dados</span></span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -3354,7 +3354,7 @@ vertical-align: -.125em;
 <span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>prods <span class="op">=</span> pl.read_database(<span class="st">&quot;SELECT * FROM produtos&quot;</span>, conn) </span>
 <span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(prods)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>shape: (15, 5)
+<pre><code>shape: (25, 5)
 ┌─────┬───────────┬─────────────┬───────┬─────────┐
 │ id  ┆ nome      ┆ categoria   ┆ preco ┆ estoque │
 │ --- ┆ ---       ┆ ---         ┆ ---   ┆ ---     │
@@ -3366,11 +3366,11 @@ vertical-align: -.125em;
 │ 4   ┆ Produto D ┆ Categoria 2 ┆ 250.0 ┆ 10      │
 │ 5   ┆ Produto E ┆ Categoria 3 ┆ 300.0 ┆ 0       │
 │ …   ┆ …         ┆ …           ┆ …     ┆ …       │
-│ 11  ┆ Produto A ┆ Categoria 1 ┆ 100.0 ┆ 50      │
-│ 12  ┆ Produto B ┆ Categoria 2 ┆ 150.0 ┆ 30      │
-│ 13  ┆ Produto C ┆ Categoria 1 ┆ 200.0 ┆ 20      │
-│ 14  ┆ Produto D ┆ Categoria 2 ┆ 250.0 ┆ 10      │
-│ 15  ┆ Produto E ┆ Categoria 3 ┆ 300.0 ┆ 0       │
+│ 21  ┆ Produto A ┆ Categoria 1 ┆ 100.0 ┆ 50      │
+│ 22  ┆ Produto B ┆ Categoria 2 ┆ 150.0 ┆ 30      │
+│ 23  ┆ Produto C ┆ Categoria 1 ┆ 200.0 ┆ 20      │
+│ 24  ┆ Produto D ┆ Categoria 2 ┆ 250.0 ┆ 10      │
+│ 25  ┆ Produto E ┆ Categoria 3 ┆ 300.0 ┆ 0       │
 └─────┴───────────┴─────────────┴───────┴─────────┘</code></pre>
 </div>
 </div>
@@ -3390,24 +3390,24 @@ vertical-align: -.125em;
 <span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;&quot;&quot;</span>, conn)</span>
 <span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(lucros)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>shape: (15, 4)
-┌───────────┬────────┬───────┬────────┐
-│ produto   ┆ compra ┆ venda ┆ lucro  │
-│ ---       ┆ ---    ┆ ---   ┆ ---    │
-│ str       ┆ f64    ┆ f64   ┆ f64    │
-╞═══════════╪════════╪═══════╪════════╡
-│ Produto A ┆ 120.5  ┆ 100.0 ┆ -20.5  │
-│ Produto A ┆ 120.5  ┆ 100.0 ┆ -20.5  │
-│ Produto A ┆ 120.5  ┆ 100.0 ┆ -20.5  │
-│ Produto B ┆ 200.0  ┆ 150.0 ┆ -50.0  │
-│ Produto B ┆ 200.0  ┆ 150.0 ┆ -50.0  │
-│ …         ┆ …      ┆ …     ┆ …      │
-│ Produto A ┆ 300.0  ┆ 100.0 ┆ -200.0 │
-│ Produto A ┆ 300.0  ┆ 100.0 ┆ -200.0 │
-│ Produto C ┆ 100.0  ┆ 200.0 ┆ 100.0  │
-│ Produto C ┆ 100.0  ┆ 200.0 ┆ 100.0  │
-│ Produto C ┆ 100.0  ┆ 200.0 ┆ 100.0  │
-└───────────┴────────┴───────┴────────┘</code></pre>
+<pre><code>shape: (25, 4)
+┌───────────┬────────┬───────┬───────┐
+│ produto   ┆ compra ┆ venda ┆ lucro │
+│ ---       ┆ ---    ┆ ---   ┆ ---   │
+│ str       ┆ f64    ┆ f64   ┆ f64   │
+╞═══════════╪════════╪═══════╪═══════╡
+│ Produto A ┆ 120.5  ┆ 100.0 ┆ -20.5 │
+│ Produto A ┆ 120.5  ┆ 100.0 ┆ -20.5 │
+│ Produto A ┆ 120.5  ┆ 100.0 ┆ -20.5 │
+│ Produto A ┆ 120.5  ┆ 100.0 ┆ -20.5 │
+│ Produto A ┆ 120.5  ┆ 100.0 ┆ -20.5 │
+│ …         ┆ …      ┆ …     ┆ …     │
+│ Produto C ┆ 100.0  ┆ 200.0 ┆ 100.0 │
+│ Produto C ┆ 100.0  ┆ 200.0 ┆ 100.0 │
+│ Produto C ┆ 100.0  ┆ 200.0 ┆ 100.0 │
+│ Produto C ┆ 100.0  ┆ 200.0 ┆ 100.0 │
+│ Produto C ┆ 100.0  ┆ 200.0 ┆ 100.0 │
+└───────────┴────────┴───────┴───────┘</code></pre>
 </div>
 </div>
 <p>#Exemplo</p>
