@@ -1,0 +1,200 @@
+---
+title: "Desafio 12"
+author: "Maria Eduarda Villéla Silva"
+format:
+  html:
+    self-contained: true
+editor: visual
+---
+
+Este relatório foi compilado em: `r format(Sys.time(), "%d/%m/%Y %H:%M:%S")`.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE)
+#chunk para ocultar warnings globalmente
+```
+
+
+```{r}
+library(reticulate) #para usar o python no RStudio
+
+#garantir que o reticulate vai usar o Python 3.12 que está presente nos pcs do lab
+use_virtualenv("~/.virtualenvs/r-reticulate", required = TRUE)
+py_run_string("import polars as pl; print(pl.__version__)")
+```
+
+# SQLite e Polars
+
+```{python}
+import polars as pl #importando polars
+import sqlite3 #importando SQLite no python
+```
+
+Iniciando a conexão com o banco
+```{python}
+conn = sqlite3.connect('data.db') #a conexão com o banco de dados é feita com o método connect
+cursor = conn.cursor() #obtemos também o cursor, que é um objeto que permite interagir com o banco de dados
+```
+
+
+Criação manual de uma tabela
+```{python}
+#o método execute é empregado para executar comandos dentro do banco SQL
+cursor.execute('''
+CREATE TABLE vendas (
+    id INTEGER PRIMARY KEY,
+    vendedor TEXT,
+    produto TEXT,
+    valor REAL,
+    data_venda DATE
+)
+''')
+```
+
+Inserção de dados em uma tabela
+```{python}
+#ao realizar uma inserção, deve-se executar o commit, que fará a confirmação da operação
+cursor.execute('''
+INSERT INTO vendas (vendedor, produto, valor, data_venda)
+VALUES
+    ('Ana', 'Produto A', 120.5, '2024-09-01'),
+    ('Carlos', 'Produto B', 200.0, '2024-10-02'),
+    ('Ana', 'Produto C', 150.0, '2024-09-03'),
+    ('Bruno', 'Produto A', 300.0, '2024-11-04'),
+    ('Carlos', 'Produto C', 100.0, '2024-10-05');
+''')
+conn.commit()
+```
+
+Consulta simples no SQLite
+```{python}
+#executa um comando SQL diretamente no banco, selecionando todas as colunas e linhas da tabela 'vendas'
+cursor.execute("SELECT * FROM vendas")
+#busca (lê) todos os resultados retornados pela consulta e armazena numa lista chamada 'rows'
+rows = cursor.fetchall()
+for row in rows: #inicia um loop para percorrer cada linha retornada
+  print(row)
+```
+
+Integração com Polars
+```{python}
+import polars as pl
+#executa a mesma consulta SQL, mas usando polars para ler diretamente os dados do banco via a conexão 'conn'
+#o resultado já vem como um data frame do polars
+dados = pl.read_database("SELECT * FROM vendas", conn)
+print(dados)
+```
+
+# Exemplos
+
+Qual é o total de vendas por vendedor?
+```{python}
+#executa uma consulta SQL que agrupa as vendas por 'vendedor' e soma o valor total de cada um
+vendas_total = pl.read_database('''
+   SELECT vendedor, SUM(valor) as total_vendas
+   FROM vendas
+   GROUP BY vendedor;
+''', conn)
+print(vendas_total)
+```
+
+Qual é o valor médio de venda por vendedor?
+```{python}
+#agrupa por 'vendedor' e calcula a média (AVG) dos valores de venda de cada um
+vendas_medias = pl.read_database('''
+   SELECT vendedor, AVG(valor) as total_vendas
+   FROM vendas
+   GROUP BY vendedor;
+''', conn)
+print(vendas_medias)
+```
+
+Crie uma tabela contendo o nome do vendedor, o número de vendas realizadas, o total vendido e o valor médio por venda.
+```{python}
+vendas_comb = pl.read_database("""
+SELECT vendedor, 
+       COUNT(*) as numero_vendas,  -- conta quantas vendas cada vendedor fez
+       SUM(valor) as total_vendas, -- soma o valor total das vendas
+       AVG(valor) as media_vendas  -- calcula o valor médio por venda
+FROM vendas
+GROUP BY vendedor;
+""", conn)
+print(vendas_comb)
+```
+
+Quais foram as vendas de, pelo menos, $200.00?
+```{python}
+#seleciona apenas as vendas cujo valor é maior ou igual a 200
+ticket_alto = pl.read_database("""
+SELECT * FROM vendas WHERE valor >= 200
+""", conn)
+print(ticket_alto)
+```
+
+Qual foi o volume mensal de vendas?
+```{python}
+#agrupa as vendas por mês (extraído da data) e soma o total de cada mês
+#'strftime' converte a data para o formato 'YYYY-MM' (ano-mês)
+vendas_mensais = pl.read_database("""
+SELECT strftime('%Y-%m', data_venda) AS mes, SUM(valor) AS total_vendas
+FROM vendas GROUP BY mes ORDER BY mes
+""", conn)
+print(vendas_mensais)
+```
+
+# Criando a tabela de produtos
+```{python}
+#cria a tabela 'produtos' no banco caso ela ainda não exista, com colunas de id, nome, categoria, preço e estoque
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS produtos (
+    id INTEGER PRIMARY KEY,
+    nome TEXT NOT NULL,
+    categoria TEXT NOT NULL,
+    preco REAL NOT NULL,
+    estoque INTEGER NOT NULL
+);
+''')
+
+#insere registros iniciais na tabela de produtos, com nome, categoria, preço e quantidade em estoque
+cursor.execute('''
+INSERT INTO produtos (nome, categoria, preco, estoque) VALUES
+    ('Produto A', 'Categoria 1', 100.0, 50),
+    ('Produto B', 'Categoria 2', 150.0, 30),
+    ('Produto C', 'Categoria 1', 200.0, 20),
+    ('Produto D', 'Categoria 2', 250.0, 10),
+    ('Produto E', 'Categoria 3', 300.0, 0);
+''')
+conn.commit() #salva as alterações (inserções) no banco de dados
+
+#consultando a tabela de produtos
+prods = pl.read_database("SELECT * FROM produtos", conn) 
+print(prods)
+```
+
+# JOINs de vendas e produtos
+- A coluna valor em vendas representa o valor de venda do respectivo produto.
+- A coluna preco em produtos representa o valor de compra do respectivo produto.
+- Apresente uma tabela com o nome do produto, seu valor de compra e venda, além do lucro no momento da venda.
+```{python}
+lucros = pl.read_database("""
+SELECT produto, valor AS compra, preco AS venda, preco-valor AS lucro
+FROM vendas
+INNER JOIN produtos ON vendas.produto = produtos.nome
+""", conn)
+print(lucros)
+```
+
+#Exemplo
+
+Qual foi o lucro médio por vendedor?
+```{python}
+#agrupa por vendedor e calcula o lucro médio (diferença entre preço de venda e compra)
+#usa um JOIN para combinar as informações das duas tabelas
+lucro_medio = pl.read_database("""
+SELECT vendedor, produto, AVG(preco-valor) AS lucro_medio
+FROM vendas
+INNER JOIN produtos ON vendas.produto = produtos.nome
+GROUP BY vendedor
+""", conn)
+print(lucro_medio)
+```
