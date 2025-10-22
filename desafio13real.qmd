@@ -1,7 +1,9 @@
 ---
 title: "Desafio 13"
 author: "Maria Eduarda Villéla Silva"
-format: html
+format:
+  html:
+    self-contained: true
 editor: visual
 ---
 
@@ -89,7 +91,7 @@ library(DBI)
 library(RSQLite)
 
 # Fazer conexão com o banco
-con <- dbConnect(RSQLite::SQLite(), "imdb.db")
+con <- dbConnect(RSQLite::SQLite(), "movies.sqlite3")
 
 # Seleciona quais colunas vamos ter na resposta (nome do filme, nota média e número de votos). Pega da tabela "basics" (b) e junta com rantings (r). Ordena por ordem decrescente a nota média e o número de votos. Por fim, seleciona os 5 primeiros.
 query <- "
