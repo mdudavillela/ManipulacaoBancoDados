@@ -1,0 +1,176 @@
+---
+title: "Desafio 14"
+author: "Maria Eduarda Villéla Silva"
+format:
+  html:
+    self-contained: true
+editor: visual
+---
+
+Este relatório foi compilado em: `r format(Sys.time(), "%d/%m/%Y %H:%M:%S")`.
+
+```{r}
+library(reticulate) #abrindo o pacote reticulate
+```
+
+```{r}
+virtualenv_create("r-reticulate", python = "C:/Program Files/Python312/python.exe") #criando um ambiente virtual para usar python
+```
+
+```{r}
+use_virtualenv("r-reticulate", required = TRUE) #manda usar o ambiente virtual criado
+py_config() #mostra as informações de configurações do Python que o reticulate está usando
+```
+
+```{r}
+py_install("polars", envname = "r-reticulate")
+py_install("plotnine", envname = "r-reticulate")
+```
+
+1.  Importe o conjunto de dados diamonds, cujo arquivo está disponível no website da disciplina.
+
+```{python}
+from plotnine.data import diamonds #importando direto do pacote plotnine
+
+print(diamonds.head()) #vendo uma parte do dataset
+```
+
+2.  Crie uma visualização de dados que descreva a associação existente entre as variáveis peso (carat) e preço (price). Que ações você tomou para garantir que você produziu um gráfico de boa qualidade? Escreva um parágrafo comunicando os seus achados.
+
+```{python}
+from plotnine import (ggplot, aes, geom_point, labs, theme_minimal, theme,
+    element_text, element_line, scale_color_manual, scale_shape_manual)
+
+#paleta de cores distintas e visuais
+cores_distintas = ["#4361EE", "#F72585", "#4CC9F0", "#3A0CA3", "#7209B7"]
+
+#diferentes formas para distinguir os cortes
+formas = ['o', '^', 's', 'D', 'P']
+
+grafico = (
+    ggplot(diamonds, aes(x='carat', y='price', color='cut', shape='cut')) +
+    
+    geom_point(alpha=0.4, size=2.2) +  # transparência alta por causa da sobreposição
+    
+    labs(
+        title='Relação entre Peso (Carat) e Preço (US$) dos Diamantes',
+        subtitle='Cada cor e forma representa um tipo de corte diferente',
+        x='Peso (carat)',
+        y='Preço (US$)',
+        color='Corte',
+        shape='Corte',
+        caption='Fonte: plotnine.data.diamonds'
+    ) +
+    
+    scale_color_manual(values=cores_distintas) +
+    scale_shape_manual(values=formas) +
+    
+    theme_minimal(base_family='Arial') +
+    theme(
+        panel_grid_major=element_line(color="#d3d3d3", size=0.5),
+        panel_grid_minor=element_line(color="#eeeeee", size=0.3),
+        plot_title=element_text(size=16, weight='bold', ha='center', color="#3a0ca3"),
+        plot_subtitle=element_text(size=11, ha='center', color="#555555"),
+        axis_title=element_text(size=12, weight='bold', color="#3a0ca3"),
+        axis_text=element_text(size=10, color="#333333"),
+        plot_caption=element_text(size=8, color="#777777", ha='right')
+    )
+)
+
+print(grafico)
+grafico.save("grafico_diamantes.png", dpi=300)
+
+```
+
+```{r}
+#visualizar o gráfico na IDE e no HTML
+knitr::include_graphics("grafico_diamantes.png")
+```
+
+De acordo com o gráfico, a relação entre peso (`carat`) e preço (`price`) dos diamantes é positiva: diamantes mais pesados tendem a custar mais caro. Para fazer com que o gráfico tivesse boa qualidade, foram utilizados pontos translúcidos para reduzir a sobreposição visual, cores distintas para diferentes categorias de corte (`cut`) de forma a destacar padrões dentro do conjunto de dados, além de títulos e rótulos claros. Para finalizar, para cada categoria de corte foi atribuída uma forma geométrica diferente, a fim de facilitar ainda mais a visualização.
+
+3. A relação identificada na questão anterior é a mesma relação presente nos diferentes cortes de diamantes? Crie uma visualização que demonstre seus achados eficientemente. Descreva sua conclusão em um parágrafo.
+
+```{python}
+from plotnine import ggplot, aes, geom_point, geom_smooth, labs, theme_minimal, theme, element_text, facet_wrap
+
+#gráfico: relação entre carat e price por corte
+grafico_facets = (
+    ggplot(diamonds, aes(x='carat', y='price')) +
+    geom_point(alpha=0.4, color="#7b2cbf", size=1.5) +    # pontos translúcidos
+    geom_smooth(method='lm', color="black", se=True, alpha=0.15) +  # linha preta
+    facet_wrap('~cut') +                                   # separa por corte
+    labs(
+        title='Relação entre Peso (Carat) e Preço por Corte de Diamante',
+        x='Peso (carat)',
+        y='Preço (US$)',
+        caption='Fonte: plotnine.data.diamonds'
+    ) +
+    theme_minimal(base_family='Arial') +
+    theme(
+        panel_grid_major=element_line(color="#d3d3d3", size=0.5),
+        panel_grid_minor=element_line(color="#eeeeee", size=0.3),
+        plot_title=element_text(size=16, weight='bold', ha='center', color="#3a0ca3"),
+        axis_title=element_text(size=12, weight='bold', color="#3a0ca3"),
+        axis_text=element_text(size=10, color="#333333"),
+        plot_caption=element_text(size=8, color="#777777", ha='right')
+    )
+)
+
+print(grafico_facets)
+grafico_facets.save("grafico_facets.png", dpi=300)
+
+```
+
+```{r}
+#visualizar o gráfico na IDE e no HTML
+knitr::include_graphics("grafico_facets.png")
+```
+
+A análise da relação entre peso (`carat`) e preço dos diamantes, segmentada pelos diferentes tipos de corte, revela que a tendência geral de aumento do preço com o peso se mantém em todos os casos. No entanto, observa-se que a intensidade dessa relação varia conforme o corte: diamantes com cortes de qualidade superior, como Ideal e Premium, tendem a apresentar preços mais elevados para um mesmo peso em comparação aos cortes Fair e Good. Isso sugere que, embora o peso seja um forte determinante do preço, o tipo de corte também exerce uma influência significativa.
+
+4.  Crie uma visualização que mostre a relação entre preço e peso do diamante, considerando as diferentes combinações de qualidade de corte, cor e clareza do diamante. Quais foram as dificuldades encontradas? A relação entre preço e peso é a mesma para diferentes configurações de diamantes?
+
+```{python}
+from plotnine import (
+    ggplot, aes, geom_point, geom_smooth, labs,
+    theme_minimal, theme, element_text, facet_grid)
+
+#gráfico: relação entre preço e peso considerando cut, color e clarity
+grafico_complex = (
+    ggplot(diamonds, aes(x='carat', y='price', color='color')) +  # cor por 'color'
+    geom_point(alpha=0.4, size=1.5) +                             # pontos translúcidos
+    geom_smooth(method='lm', color="black", se=False, alpha=0.2) + # linha preta
+    facet_grid('cut ~ clarity') +                                 # linhas por corte, colunas por clareza
+    labs(
+        title='Relação entre Peso (Carat) e Preço do Diamante',
+        subtitle='Separado por corte e clareza; cor indica a cor do diamante',
+        x='Peso (carat)',
+        y='Preço (US$)',
+        color='Cor',
+        caption='Fonte: plotnine.data.diamonds'
+    ) +
+    theme_minimal(base_family='Arial') +
+    theme(
+        panel_grid_major=element_line(color="#d3d3d3", size=0.5),
+        panel_grid_minor=element_line(color="#eeeeee", size=0.3),
+        plot_title=element_text(size=16, weight='bold', ha='center', color="#3a0ca3"),
+        plot_subtitle=element_text(size=11, ha='center', color="#555555"),
+        axis_title=element_text(size=12, weight='bold', color="#3a0ca3"),
+        axis_text=element_text(size=8, color="#333333"),
+        plot_caption=element_text(size=8, color="#777777", ha='right'),
+        legend_position='bottom'
+    )
+)
+
+print(grafico_complex)
+grafico_complex.save("grafico_complex.png", dpi=300)
+
+```
+
+```{r}
+#visualizar o gráfico na IDE e no HTML
+knitr::include_graphics("grafico_complex.png")
+```
+
+O gráfico mostra que, embora exista uma relação positiva consistente entre o peso (`carat`) e o preço dos diamantes, essa relação varia de forma perceptível entre as diferentes combinações de corte, cor e clareza. Diamantes com cortes de maior qualidade e maior clareza tendem a apresentar preços mais altos, mesmo para pesos semelhantes, indicando que esses fatores valorizam significativamente a pedra. As principais dificuldades encontradas foram a sobreposição dos pontos e a densidade elevada de dados, que dificultam a visualização clara das tendências dentro de cada combinação. Ainda assim, o gráfico permite observar que o peso continua sendo o principal determinante do preço, mas seu efeito é amplificado conforme a qualidade geral do diamante aumenta.
